@@ -258,22 +258,22 @@ openEarable.sensorManager.subscribeOnSensorDataReceived((sensorData) => {
     const movementBar = document.getElementById("movementBar");
 
     if (movementStatus && movementBar) {
-        // 1) Magnitude hesapla
+        // 1) Magnitude calculation
         const magnitude = Math.sqrt(
             acc_x * acc_x +
             acc_y * acc_y +
             acc_z * acc_z
         );
 
-        // 2) Sliding window: son 50 değeri tut
+        // 2) Sliding window: last 50
         magnitudeBuffer.push(magnitude);
         if (magnitudeBuffer.length > MAG_BUFFER_SIZE) {
             magnitudeBuffer.shift(); // en eskiyi at
         }
 
-        // Hesaplama için en az belirli sayıda örnek bekleyelim (örn. 10)
+        // Min example 10)
         if (magnitudeBuffer.length >= 10) {
-            // 3) Mean & STD (window üstünden)
+            // 3) Mean & STD (from window)
             const mean = magnitudeBuffer.reduce((a, b) => a + b, 0) / magnitudeBuffer.length;
 
             const variance = magnitudeBuffer
@@ -282,16 +282,15 @@ openEarable.sensorManager.subscribeOnSensorDataReceived((sensorData) => {
 
             const std = Math.sqrt(variance);
 
-            // 4) STD üstünden EMA (smooth)
+            // 4) EMA from STD (smooth)
             if (emaStd === null) {
-                emaStd = std; // İlk değerde direkt başlat
+                emaStd = std; // Start directly at first value
             } else {
                 emaStd = EMA_ALPHA * std + (1 - EMA_ALPHA) * emaStd;
             }
 
-            // 5) Movement / No movement kararı — EMA STD’ye göre
-            const STD_THRESHOLD = 1.0;  // kalibrasyon için oynayabilirsin
-
+            // 5) Movement / No movement decision about EMA STD
+            const STD_THRESHOLD = 1.0;  // can play for calibration
             if (emaStd > STD_THRESHOLD) {
                 movementStatus.textContent = "Movement";
                 movementStatus.style.color = "#00ff66";
@@ -300,9 +299,9 @@ openEarable.sensorManager.subscribeOnSensorDataReceived((sensorData) => {
                 movementStatus.style.color = "#ff4444";
             }
 
-            // 6) EMA STD → [0, 100] movement seviyesi
-            const STD_MIN = 0.0;   // “tam stabil” civarını temsil etsin
-            const STD_MAX = 3.0;   // “çok hareketli” için tipik üst sınır (deneyerek ayarla)
+            // 6) EMA STD → [0, 100] movement value
+            const STD_MIN = 0.0;   // “stable” civarını temsil etsin
+            const STD_MAX = 3.0;   // “too much movement”
 
             let norm = (emaStd - STD_MIN) / (STD_MAX - STD_MIN);
             if (norm < 0) norm = 0;
@@ -314,7 +313,7 @@ openEarable.sensorManager.subscribeOnSensorDataReceived((sensorData) => {
             movementBar.setAttribute("aria-valuenow", percentage);
             movementBar.textContent = percentage.toString();
 
-            // Bar rengi seviye ile değişsin
+            // Change bar colour
             movementBar.classList.remove("bg-secondary", "bg-warning", "bg-success");
             if (percentage < 20) {
                 movementBar.classList.add("bg-secondary");
@@ -324,7 +323,7 @@ openEarable.sensorManager.subscribeOnSensorDataReceived((sensorData) => {
                 movementBar.classList.add("bg-success");
             }
 
-            // İstersen debug için açabilirsin:
+            // Can use for debug
             // console.log("STD:", std, "EMA STD:", emaStd, "Level:", percentage);
         }
     }
